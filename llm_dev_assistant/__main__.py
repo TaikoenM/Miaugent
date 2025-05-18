@@ -2,8 +2,10 @@
 import os
 import argparse
 import json
+import logging
 from typing import Dict, List, Any, Optional
 
+from .logging.logger import logger
 from .llm.openai_adapter import OpenAIAdapter
 from .llm.local_llm_adapter import LocalLLMAdapter
 from .parsers.gms2_parser import GMS2Parser
@@ -12,27 +14,34 @@ from .code_manager.change_implementer import ChangeImplementer
 from .code_manager.test_manager import TestManager
 from .workflow.workflow_engine import WorkflowEngine
 
-
 def create_workflow_engine(llm_type: str, local_model_path: Optional[str] = None) -> WorkflowEngine:
     """Create a workflow engine with the specified components."""
+    log = logger.get_logger("workflow_setup")
+    log.info(f"Creating workflow engine with LLM type: {llm_type}")
 
     # Initialize LLM
     if llm_type.lower() == "openai":
+        log.debug("Initializing OpenAI adapter")
         llm = OpenAIAdapter()
     elif llm_type.lower() == "local":
+        log.debug(f"Initializing local LLM adapter with model: {local_model_path}")
         if not local_model_path:
+            log.error("Local model path not provided")
             raise ValueError("local_model_path must be provided for local LLM")
         llm = LocalLLMAdapter(model_path=local_model_path)
     else:
+        log.error(f"Unsupported LLM type: {llm_type}")
         raise ValueError(f"Unsupported LLM type: {llm_type}")
 
     # Initialize components
+    log.debug("Initializing parser, code analyzer, change implementer, and test manager")
     parser = GMS2Parser()
     code_analyzer = CodeAnalyzer()
     change_implementer = ChangeImplementer()
     test_manager = TestManager()
 
     # Create workflow engine
+    log.info("Creating workflow engine with initialized components")
     workflow_engine = WorkflowEngine(
         llm=llm,
         parser=parser,
@@ -46,6 +55,14 @@ def create_workflow_engine(llm_type: str, local_model_path: Optional[str] = None
 
 def main():
     """Main CLI entry point."""
+    # Initialize logging system
+    log_paths = logger.setup()
+    log = logger.get_logger("main")
+    log.info("LLM Development Assistant starting")
+    log.info(f"Debug log: {log_paths['debug_log']}")
+    log.info(f"Info log: {log_paths['info_log']}")
+
+    # ... rest of the main function ...
     parser = argparse.ArgumentParser(description="LLM-assisted development automation tool")
 
     # Top-level arguments
@@ -119,8 +136,10 @@ def main():
     result = {}
 
     if args.command == "init":
+        log.info(f"Initializing project: {args.project_path}")
         result = workflow_engine.initialize_project(args.project_path)
         if args.output:
+            log.debug(f"Saving project context to: {args.output}")
             with open(args.output, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2)
 
@@ -184,7 +203,11 @@ def main():
         result = workflow_engine.load_workflow_state(args.input)
 
     # Print result
+    log.debug(f"Command result: {json.dumps(result, indent=2)[:1000]}..." if len(
+        json.dumps(result)) > 1000 else f"Command result: {json.dumps(result, indent=2)}")
     print(json.dumps(result, indent=2))
+
+    log.info("LLM Development Assistant finished")
 
 
 if __name__ == "__main__":
