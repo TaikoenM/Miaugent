@@ -212,3 +212,117 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""***
+# Set GitHub token
+export GITHUB_TOKEN=your_github_token
+
+# Clone a repository
+python -m llm_dev_assistant github clone https://github.com/username/repo.git
+
+# Create a feature branch
+python -m llm_dev_assistant github branch feature/new-feature
+
+# Generate code with LLM
+python -m llm_dev_assistant code "Implement a function to parse GML files" --file path/to/file.py
+
+# Implement the changes
+python -m llm_dev_assistant implement path/to/file.py suggested_code.json
+
+# Commit the changes
+python -m llm_dev_assistant github commit "Add GML file parser function"
+
+# Create a pull request
+python -m llm_dev_assistant github pr username/repo feature/new-feature --title "Add GML Parser"
+
+# Using OpenAI (default)
+python -m llm_dev_assistant [command] [arguments]
+
+# Using a local LLM
+python -m llm_dev_assistant --llm=local --local-model-path=/path/to/llm/model [command] [arguments]
+
+# Initialize a Game Maker Studio 2 project
+python -m llm_dev_assistant init /path/to/gms2/project
+
+# Initialize and save context to a file
+python -m llm_dev_assistant init /path/to/gms2/project --output=project_context.json
+
+# Request code for a new feature with no existing file
+python -m llm_dev_assistant code "Implement a function to parse GMS2 sprite files" 
+
+# Request code for modifying an existing file
+python -m llm_dev_assistant code "Add error handling to the parse_script method" --file=llm_dev_assistant/parsers/gms2_parser.py
+
+# Save the LLM suggestions to a file
+python -m llm_dev_assistant code "Create a unit test for the GMS2Parser" --output=parser_test_suggestion.json
+
+# Verify if implementation meets requirements
+python -m llm_dev_assistant verify original_gms2_parser.py new_gms2_parser.py requirements.txt
+
+# Save verification results
+python -m llm_dev_assistant verify original_gms2_parser.py new_gms2_parser.py requirements.txt --output=verification_result.json
+
+# Implement code changes from a suggestion file
+python -m llm_dev_assistant implement llm_dev_assistant/parsers/gms2_parser.py new_parser_code.txt
+
+# Implement and save the implementation report
+python -m llm_dev_assistant implement llm_dev_assistant/parsers/gms2_parser.py new_parser_code.txt --output=implementation_report.json
+
+# Check if existing tests cover a modified file
+python -m llm_dev_assistant verify-tests llm_dev_assistant/parsers/gms2_parser.py
+
+# Save test verification results
+python -m llm_dev_assistant verify-tests llm_dev_assistant/parsers/gms2_parser.py --output=test_coverage.json
+
+# Run all available tests
+python -m llm_dev_assistant run-tests
+
+# Run specific test files
+python -m llm_dev_assistant run-tests --tests tests/test_gms2_parser.py tests/test_workflow.py
+
+# Save test results
+python -m llm_dev_assistant run-tests --tests tests/test_gms2_parser.py --output=test_results.json
+
+# Plan next steps based on a single goal
+python -m llm_dev_assistant plan "Complete GMS2 parser implementation"
+
+# Plan next steps with multiple goals
+python -m llm_dev_assistant plan "Fix parser bugs" "Add support for sprite sheets" "Improve test coverage"
+
+# Save planning results
+python -m llm_dev_assistant plan "Implement GitHub integration" --output=development_plan.json
+
+# Save current workflow state
+python -m llm_dev_assistant save workflow_state.json
+
+# Load saved workflow state
+python -m llm_dev_assistant load workflow_state.json
+
+# 1. Initialize the project
+python -m llm_dev_assistant init /path/to/gms2/project
+
+# 2. Plan next development steps
+python -m llm_dev_assistant plan "Implement GMS2 asset parser" "Create unit tests"
+
+# 3. Request code for implementation
+python -m llm_dev_assistant code "Create a function to parse GMS2 room files" --file=llm_dev_assistant/parsers/gms2_parser.py --output=room_parser.json
+
+# 4. Implement the suggested changes
+python -m llm_dev_assistant implement llm_dev_assistant/parsers/gms2_parser.py room_parser.json
+
+# 5. Verify if tests cover the implementation
+python -m llm_dev_assistant verify-tests llm_dev_assistant/parsers/gms2_parser.py
+
+# 6. Request test code if needed
+python -m llm_dev_assistant code "Create unit tests for GMS2 room parser" --file=tests/test_gms2_parser.py --output=room_parser_tests.json
+
+# 7. Implement the test code
+python -m llm_dev_assistant implement tests/test_gms2_parser.py room_parser_tests.json
+
+# 8. Run the tests
+python -m llm_dev_assistant run-tests --tests tests/test_gms2_parser.py
+
+# 9. Save workflow state
+python -m llm_dev_assistant save workflows/gms2_room_parser.json
+
+***"""
