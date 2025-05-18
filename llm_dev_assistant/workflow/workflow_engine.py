@@ -7,7 +7,9 @@ from ..parsers.parser_interface import ParserInterface
 from ..code_manager.code_analyzer import CodeAnalyzer
 from ..code_manager.change_implementer import ChangeImplementer
 from ..code_manager.test_manager import TestManager
-
+from ..github.github_client import GitHubClient
+from ..github.repo_manager import RepoManager
+from ..github.pr_manager import PRManager
 
 class WorkflowEngine:
     """Orchestrates the development workflow with LLM assistance."""
@@ -17,61 +19,136 @@ class WorkflowEngine:
                  parser: ParserInterface,
                  code_analyzer: CodeAnalyzer,
                  change_implementer: ChangeImplementer,
-                 test_manager: TestManager):
+                 test_manager: TestManager,
+                 github_client: Optional[GitHubClient] = None,
+                 repo_manager: Optional[RepoManager] = None):
+        # ... existing code ...
+        self.github_client = github_client
+        self.repo_manager = repo_manager
+
+        if github_client and repo_manager:
+            self.pr_manager = PRManager(github_client, repo_manager)
+        else:
+            self.pr_manager = None
+
+    # Add these new methods:
+
+    def clone_repository(self, repo_url: str, target_dir: Optional[str] = None) -> Dict[str, Any]:
         """
-        Initialize the workflow engine.
+        Clone a Git repository.
 
         Args:
-            llm: LLM interface for queries
-            parser: Parser for code analysis
-            code_analyzer: Code analyzer
-            change_implementer: Implements code changes
-            test_manager: Manages tests
-        """
-        self.llm = llm
-        self.parser = parser
-        self.code_analyzer = code_analyzer
-        self.change_implementer = change_implementer
-        self.test_manager = test_manager
-
-        # Workflow state
-        self.workflow_state = {
-            "project_path": None,
-            "current_task": None,
-            "completed_tasks": [],
-            "pending_tasks": [],
-            "context": None
-        }
-
-    def initialize_project(self, project_path: str) -> Dict[str, Any]:
-        """
-        Initialize a project for development.
-
-        Args:
-            project_path: Path to the project directory
+            repo_url: Repository URL
+            target_dir: Target directory
 
         Returns:
-            Project context information
+            Dictionary with clone results
         """
-        self.workflow_state["project_path"] = project_path
+        if not self.repo_manager:
+            return {
+                "status": "error",
+                "message": "Repository manager not initialized"
+            }
 
-        # Parse the project
-        parsed_data = self.parser.parse_directory(project_path)
+        result = self.repo_manager.clone_repo(repo_url, target_dir)
 
-        # Generate context for LLM
-        context = self.parser.generate_context(parsed_data)
-        self.workflow_state["context"] = context
+        if result["status"] == "success":
+            # Initialize project with cloned repository
+            self.initialize_project(result["target_dir"])
 
-        # Initialize code analysis
-        code_structure = self.code_analyzer.analyze_project(project_path)
+        return result
 
-        # Return project information
-        return {
-            "project_path": project_path,
-            "context": context,
-            "code_structure": code_structure,
-            "status": "initialized"
-        }
+    def create_feature_branch(self, branch_name: str) -> Dict[str, Any]:
+        """
+        Create a feature branch.
+
+        Args:
+            branch_name: Branch name
+
+        Returns:
+            Dictionary with branch creation results
+        """
+        if not self.repo_manager:
+            return {
+                "status": "error",
+                "message": "Repository manager not initialized"
+            }
+
+        if not self.workflow_state["project_path"]:
+            return {
+                "status": "error",
+                "message": "Project not initialized"
+            }
+
+        return self.repo_manager.create_branch(
+            self.workflow_state["project_path"],
+            branch_name
+        )
+
+    def commit_changes(self, message: str, files: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Commit changes.
+
+        Args:
+            message: Commit message
+            files: List of files to commit
+
+        Returns:
+            Dictionary with commit results
+        """
+        if not self.repo_manager:
+            return {
+                "status": "error",
+                "message": "Repository manager not initialized"
+            }
+
+        if not self.workflow_state["project_path"]:
+            return {
+                "status": "error",
+                "message": "Project not initialized"
+            }
+
+        return self.repo_manager.commit_changes(
+            self.workflow_state["project_path"],
+            message,
+            files
+        )
+
+    def create_pull_request(self, repo_name: str, title: str, description: str,
+                            branch_name: str, base_branch: str = "main") -> Dict[str, Any]:
+        """
+        Create a pull request.
+
+        Args:
+            repo_name: GitHub repository name (format: 'owner/repo')
+            title: PR title
+            description: PR description
+            branch_name: Branch with changes
+            base_branch: Target branch
+
+        Returns:
+            Dictionary with PR creation results
+        """
+        if not self.pr_manager:
+            return {
+                "status": "error",
+                "message": "PR manager not initialized"
+            }
+
+        if not self.workflow_state["project_path"]:
+            return {
+                "status": "error",
+                "message": "Project not initialized"
+            }
+
+        return self.pr_manager.create_pr_for_changes(
+            self.workflow_state["project_path"],
+            repo_name,
+            title,
+            description,
+            branch_name,
+            base_branch
+        )
 
     def request_code_implementation(self, task_description: str,
                                     file_path: Optional[str] = None) -> Dict[str, Any]:
