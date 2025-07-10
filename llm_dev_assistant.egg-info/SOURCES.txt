@@ -1,0 +1,8 @@
+README.md
+setup.py
+llm_dev_assistant.egg-info/PKG-INFO
+llm_dev_assistant.egg-info/SOURCES.txt
+llm_dev_assistant.egg-info/dependency_links.txt
+llm_dev_assistant.egg-info/entry_points.txt
+llm_dev_assistant.egg-info/requires.txt
+llm_dev_assistant.egg-info/top_level.txt

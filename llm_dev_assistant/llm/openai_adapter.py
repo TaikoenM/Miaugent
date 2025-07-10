@@ -6,7 +6,7 @@ import logging
 import openai
 from .llm_interface import LLMInterface
 from ..utils.file_utils import read_file
-from ..logging.logger import logger
+from ..log_system.logger import logger
 
 
 class OpenAIAdapter(LLMInterface):
@@ -95,5 +95,5 @@ class OpenAIAdapter(LLMInterface):
                 self.log.error(f"Unexpected error querying OpenAI API: {str(e)}")
                 raise RuntimeError(f"Error querying OpenAI API: {str(e)}")
 
-    # Update the remaining methods with logging...
+    # Update the remaining methods with log_system...
     # (For brevity, I won't modify every method, but the pattern is similar)

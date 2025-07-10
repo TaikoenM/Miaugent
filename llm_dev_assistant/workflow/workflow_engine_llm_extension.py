@@ -1,7 +1,7 @@
 # llm_dev_assistant/workflow/workflow_engine_llm_extension.py
 from typing import Dict, List, Any, Optional, Union
 
-from ..logging.logger import logger
+from ..log_system.logger import logger
 from ..llm.llm_selector import TaskPurpose, TaskComplexity, choose_llm, LLMInterface
 from ..llm.llm_selector import LLMSelector
 from ..config.llm_config import llm_config

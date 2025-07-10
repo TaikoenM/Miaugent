@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional
 import os
 import json
 
-from ..logging.logger import logger
+from ..log_system.logger import logger
 from ..llm.llm_selector import TaskPurpose, TaskComplexity, ModelType
 
 

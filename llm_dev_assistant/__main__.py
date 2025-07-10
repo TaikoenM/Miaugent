@@ -5,7 +5,7 @@ import json
 import logging
 from typing import Dict, List, Any, Optional
 
-from .logging.logger import logger
+from .log_system.logger import logger
 from .llm.openai_adapter import OpenAIAdapter
 from .llm.local_llm_adapter import LocalLLMAdapter
 from .parsers.gms2_parser import GMS2Parser
@@ -13,6 +13,7 @@ from .code_manager.code_analyzer import CodeAnalyzer
 from .code_manager.change_implementer import ChangeImplementer
 from .code_manager.test_manager import TestManager
 from .workflow.workflow_engine import WorkflowEngine
+
 
 def create_workflow_engine(llm_type: str, local_model_path: Optional[str] = None) -> WorkflowEngine:
     """Create a workflow engine with the specified components."""
@@ -55,7 +56,14 @@ def create_workflow_engine(llm_type: str, local_model_path: Optional[str] = None
 
 def main():
     """Main CLI entry point."""
-    # Initialize logging system
+    # Check if GUI was requested
+    if len(os.sys.argv) > 1 and os.sys.argv[1] == 'gui':
+        # Launch GUI
+        from .gui.main_window import main as gui_main
+        gui_main()
+        return
+
+    # Initialize log_system system
     log_paths = logger.setup()
     log = logger.get_logger("main")
     log.info("LLM Development Assistant starting")
@@ -64,6 +72,13 @@ def main():
 
     # ... rest of the main function ...
     parser = argparse.ArgumentParser(description="LLM-assisted development automation tool")
+
+    # Add GUI option
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch GUI interface"
+    )
 
     # Top-level arguments
     parser.add_argument(
@@ -128,6 +143,12 @@ def main():
 
     # Parse arguments
     args = parser.parse_args()
+
+    # Launch GUI if requested
+    if args.gui:
+        from .gui.main_window import main as gui_main
+        gui_main()
+        return
 
     # Create workflow engine
     workflow_engine = create_workflow_engine(args.llm, args.local_model_path)
@@ -214,6 +235,11 @@ if __name__ == "__main__":
     main()
 
 """***
+# Launch GUI interface
+python -m llm_dev_assistant gui
+# or
+python -m llm_dev_assistant --gui
+
 # Set GitHub token
 export GITHUB_TOKEN=your_github_token
 

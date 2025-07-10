@@ -13,12 +13,12 @@ from llm_dev_assistant.code_manager.code_analyzer import CodeAnalyzer
 from llm_dev_assistant.code_manager.change_implementer import ChangeImplementer
 from llm_dev_assistant.code_manager.test_manager import TestManager
 from llm_dev_assistant.parsers.gms2_parser import GMS2Parser
-from llm_dev_assistant.logging.logger import logger
+from llm_dev_assistant.log_system.logger import logger
 
 
 def setup_workflow() -> WorkflowEngine:
     """Set up and return a workflow engine instance."""
-    # Initialize logging
+    # Initialize log_system
     log_paths = logger.setup()
     log = logger.get_logger("example")
     log.info("Starting LLM integration example")

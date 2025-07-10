@@ -6,7 +6,7 @@ import logging
 import json
 
 from .llm_interface import LLMInterface
-from ..logging.logger import logger
+from ..log_system.logger import logger
 
 
 class TaskPurpose(Enum):

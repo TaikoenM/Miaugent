@@ -1,4 +1,4 @@
-# llm_dev_assistant/logging/logger.py
+# llm_dev_assistant/log_system/logger.py
 import os
 import sys
 import logging
@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 
 
 class Logger:
-    """Advanced logging system with dual log files and structured directory organization."""
+    """Advanced log_system system with dual log files and structured directory organization."""
 
     def __init__(self):
         """Initialize the logger instance."""
@@ -18,7 +18,7 @@ class Logger:
 
     def setup(self, app_name: str = "llm_dev_assistant", log_dir: str = "logs") -> Dict[str, str]:
         """
-        Set up the logging system with date-based directories and timestamped log files.
+        Set up the log_system system with date-based directories and timestamped log files.
 
         Args:
             app_name: Name of the application for logger naming

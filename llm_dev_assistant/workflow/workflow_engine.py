@@ -9,7 +9,7 @@ from ..parsers.parser_interface import ParserInterface
 from ..code_manager.code_analyzer import CodeAnalyzer
 from ..code_manager.change_implementer import ChangeImplementer
 from ..code_manager.test_manager import TestManager
-from ..logging.logger import logger
+from ..log_system.logger import logger
 
 
 class WorkflowEngine:

@@ -1,4 +1,4 @@
-# llm_dev_assistant/logging/decorators.py
+# llm_dev_assistant/log_system/decorators.py
 import functools
 import inspect
 import logging
