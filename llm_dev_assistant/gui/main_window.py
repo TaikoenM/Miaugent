@@ -57,6 +57,7 @@ class LLMDevAssistantGUI:
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Initialize Project", command=self._init_project)
+        file_menu.add_command(label="Generate Project Summary", command=self._generate_summary)
         file_menu.add_separator()
         file_menu.add_command(label="Save Workflow", command=self._save_workflow)
         file_menu.add_command(label="Load Workflow", command=self._load_workflow)
@@ -114,21 +115,38 @@ class LLMDevAssistantGUI:
         ttk.Separator(control_frame, orient='horizontal').grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E),
                                                                pady=10)
 
-        # Task operations
-        ttk.Label(control_frame, text="Task Description:").grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
-        self.task_text = tk.Text(control_frame, height=5, width=40, wrap=tk.WORD)
-        self.task_text.grid(row=4, column=0, columnspan=3, pady=(0, 5), sticky=(tk.W, tk.E))
+        # Project Summary section
+        ttk.Label(control_frame, text="Project Summary:").grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
+        ttk.Label(control_frame, text="Summary File:").grid(row=4, column=0, sticky=tk.W, pady=(0, 5))
+        self.summary_path_var = tk.StringVar()
+        summary_entry = ttk.Entry(control_frame, textvariable=self.summary_path_var, width=30)
+        summary_entry.grid(row=4, column=1, padx=(5, 0), pady=(0, 5))
+        ttk.Button(control_frame, text="Browse", command=self._browse_summary_file).grid(row=4, column=2, padx=(5, 0),
+                                                                                         pady=(0, 5))
+        ttk.Button(control_frame, text="Generate Project Summary", command=self._generate_summary).grid(row=5, column=0,
+                                                                                                        columnspan=3,
+                                                                                                        pady=(0, 10),
+                                                                                                        sticky=tk.W + tk.E)
 
-        ttk.Label(control_frame, text="File Path (optional):").grid(row=5, column=0, sticky=tk.W, pady=(0, 5))
+        # Separator
+        ttk.Separator(control_frame, orient='horizontal').grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E),
+                                                               pady=10)
+
+        # Task operations
+        ttk.Label(control_frame, text="Task Description:").grid(row=7, column=0, sticky=tk.W, pady=(0, 5))
+        self.task_text = tk.Text(control_frame, height=5, width=40, wrap=tk.WORD)
+        self.task_text.grid(row=8, column=0, columnspan=3, pady=(0, 5), sticky=(tk.W, tk.E))
+
+        ttk.Label(control_frame, text="File Path (optional):").grid(row=9, column=0, sticky=tk.W, pady=(0, 5))
         self.file_path_var = tk.StringVar()
         file_entry = ttk.Entry(control_frame, textvariable=self.file_path_var, width=30)
-        file_entry.grid(row=5, column=1, padx=(5, 0), pady=(0, 5))
-        ttk.Button(control_frame, text="Browse", command=self._browse_file).grid(row=5, column=2, padx=(5, 0),
+        file_entry.grid(row=9, column=1, padx=(5, 0), pady=(0, 5))
+        ttk.Button(control_frame, text="Browse", command=self._browse_file).grid(row=9, column=2, padx=(5, 0),
                                                                                  pady=(0, 5))
 
         # Task buttons
         button_frame = ttk.Frame(control_frame)
-        button_frame.grid(row=6, column=0, columnspan=3, pady=10)
+        button_frame.grid(row=10, column=0, columnspan=3, pady=10)
 
         ttk.Button(button_frame, text="Request Code", command=self._request_code).grid(row=0, column=0, padx=2, pady=2)
         ttk.Button(button_frame, text="Verify Implementation", command=self._verify_implementation).grid(row=0,
@@ -142,14 +160,14 @@ class LLMDevAssistantGUI:
                                                                                              pady=2)
 
         # Separator
-        ttk.Separator(control_frame, orient='horizontal').grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E),
+        ttk.Separator(control_frame, orient='horizontal').grid(row=11, column=0, columnspan=3, sticky=(tk.W, tk.E),
                                                                pady=10)
 
         # Workflow management
-        ttk.Label(control_frame, text="Workflow Management:").grid(row=8, column=0, columnspan=3, sticky=tk.W,
+        ttk.Label(control_frame, text="Workflow Management:").grid(row=12, column=0, columnspan=3, sticky=tk.W,
                                                                    pady=(0, 5))
         workflow_frame = ttk.Frame(control_frame)
-        workflow_frame.grid(row=9, column=0, columnspan=3)
+        workflow_frame.grid(row=13, column=0, columnspan=3)
 
         ttk.Button(workflow_frame, text="Save Workflow", command=self._save_workflow).pack(side=tk.LEFT, padx=2)
         ttk.Button(workflow_frame, text="Load Workflow", command=self._load_workflow).pack(side=tk.LEFT, padx=2)
@@ -266,6 +284,25 @@ class LLMDevAssistantGUI:
         if filename:
             self.file_path_var.set(filename)
 
+    def _browse_summary_file(self):
+        """Browse for summary file location."""
+        # Get default directory
+        default_dir = ""
+        if self.project_path_var.get():
+            # Use parent directory of project (Miaugent directory)
+            project_parent = os.path.dirname(self.project_path_var.get())
+            default_dir = project_parent
+
+        filename = filedialog.asksaveasfilename(
+            title="Save Project Summary As",
+            defaultextension=".md",
+            filetypes=[("Markdown files", "*.md"), ("Text files", "*.txt"), ("All files", "*.*")],
+            initialdir=default_dir,
+            initialfile="project_summary.md"
+        )
+        if filename:
+            self.summary_path_var.set(filename)
+
     def _update_status(self, message: str):
         """Update status bar."""
         self.status_var.set(message)
@@ -380,6 +417,156 @@ class LLMDevAssistantGUI:
         self._run_async(self.workflow_engine.initialize_project, project_path)
         self.current_project_path = project_path
 
+    def _generate_summary(self):
+        """Generate and save project summary."""
+        if not self._ensure_workflow_engine():
+            return
+
+        project_path = self.project_path_var.get()
+        if not project_path:
+            messagebox.showwarning("Warning", "Please select a project directory first")
+            return
+
+        summary_path = self.summary_path_var.get()
+        if not summary_path:
+            # Set default path if not specified
+            project_parent = os.path.dirname(project_path)
+            summary_path = os.path.join(project_parent, "project_summary.md")
+            self.summary_path_var.set(summary_path)
+
+        self._update_status("Generating project summary...")
+
+        def generate_and_save_summary():
+            try:
+                # Initialize project if not already done
+                if self.workflow_engine.workflow_state.get("project_path") != project_path:
+                    self._update_status(f"Initializing project: {project_path}")
+                    self.workflow_engine.initialize_project(project_path)
+
+                # Parse the project
+                parsed_data = self.workflow_engine.parser.parse_directory(project_path)
+
+                # Analyze code structure
+                code_structure = self.workflow_engine.code_analyzer.analyze_project(project_path)
+
+                # Generate context/summary
+                context = self.workflow_engine.parser.generate_context(parsed_data)
+
+                # Create comprehensive summary
+                summary_lines = []
+                summary_lines.append(f"# Project Summary\n")
+                summary_lines.append(f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                summary_lines.append(f"**Project Path:** {project_path}\n")
+                summary_lines.append("\n---\n")
+
+                # Add context from parser
+                summary_lines.append(context)
+                summary_lines.append("\n---\n")
+
+                # Add code structure analysis
+                summary_lines.append("## Code Structure Analysis\n")
+                summary_lines.append(f"- **Total Files:** {len(code_structure.get('files', []))}\n")
+                summary_lines.append(f"- **Total Modules:** {len(code_structure.get('modules', {}))}\n")
+                summary_lines.append(f"- **Total Classes:** {len(code_structure.get('classes', {}))}\n")
+                summary_lines.append(f"- **Total Functions:** {len(code_structure.get('functions', {}))}\n")
+                summary_lines.append("\n")
+
+                # List all functions
+                summary_lines.append("### Functions\n")
+                functions = code_structure.get('functions', {})
+                if functions:
+                    for func_name, func_info in sorted(functions.items()):
+                        file_path = func_info.get('file', 'Unknown')
+                        args = ', '.join(func_info.get('args', []))
+                        summary_lines.append(
+                            f"- **{func_name}({args})** in `{os.path.relpath(file_path, project_path)}`\n")
+                        if func_info.get('docstring'):
+                            summary_lines.append(f"  - {func_info['docstring'].strip()}\n")
+                else:
+                    summary_lines.append("No functions found.\n")
+                summary_lines.append("\n")
+
+                # List all classes
+                summary_lines.append("### Classes\n")
+                classes = code_structure.get('classes', {})
+                if classes:
+                    for class_name, class_info in sorted(classes.items()):
+                        file_path = class_info.get('file', 'Unknown')
+                        summary_lines.append(f"- **{class_name}** in `{os.path.relpath(file_path, project_path)}`\n")
+                        if class_info.get('docstring'):
+                            summary_lines.append(f"  - {class_info['docstring'].strip()}\n")
+                        methods = class_info.get('methods', [])
+                        if methods:
+                            summary_lines.append("  - Methods:\n")
+                            for method in methods:
+                                args = ', '.join(method.get('args', []))
+                                summary_lines.append(f"    - {method['name']}({args})\n")
+                else:
+                    summary_lines.append("No classes found.\n")
+                summary_lines.append("\n")
+
+                # List all modules
+                summary_lines.append("### Modules\n")
+                modules = code_structure.get('modules', {})
+                if modules:
+                    for module_name, module_info in sorted(modules.items()):
+                        file_path = module_info.get('file', 'Unknown')
+                        summary_lines.append(f"- **{module_name}** (`{os.path.relpath(file_path, project_path)}`)\n")
+                        imports = module_info.get('imports', [])
+                        if imports:
+                            summary_lines.append(f"  - Imports: {', '.join(imports[:5])}")
+                            if len(imports) > 5:
+                                summary_lines.append(f" and {len(imports) - 5} more")
+                            summary_lines.append("\n")
+                else:
+                    summary_lines.append("No modules found.\n")
+                summary_lines.append("\n")
+
+                # List dependencies
+                summary_lines.append("### Dependencies\n")
+                dependencies = code_structure.get('dependencies', {})
+                if dependencies:
+                    for dep, users in sorted(dependencies.items()):
+                        if users:
+                            summary_lines.append(f"- **{dep}** used by: {', '.join(users[:3])}")
+                            if len(users) > 3:
+                                summary_lines.append(f" and {len(users) - 3} more")
+                            summary_lines.append("\n")
+                else:
+                    summary_lines.append("No dependencies found.\n")
+
+                # Join all lines
+                summary_content = ''.join(summary_lines)
+
+                # Create directory if it doesn't exist
+                summary_dir = os.path.dirname(summary_path)
+                if summary_dir and not os.path.exists(summary_dir):
+                    os.makedirs(summary_dir)
+
+                # Save summary to file
+                with open(summary_path, 'w', encoding='utf-8') as f:
+                    f.write(summary_content)
+
+                return {
+                    "status": "success",
+                    "message": f"Project summary saved to: {summary_path}",
+                    "summary_path": summary_path,
+                    "stats": {
+                        "files": len(code_structure.get('files', [])),
+                        "modules": len(code_structure.get('modules', {})),
+                        "classes": len(code_structure.get('classes', {})),
+                        "functions": len(code_structure.get('functions', {}))
+                    }
+                }
+
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": f"Failed to generate summary: {str(e)}"
+                }
+
+        self._run_async(generate_and_save_summary)
+
     def _request_code(self):
         """Request code implementation."""
         if not self._ensure_workflow_engine():
@@ -456,10 +643,17 @@ class LLMDevAssistantGUI:
             messagebox.showwarning("Warning", "No workflow to save")
             return
 
+        # Get default directory (parent of project directory)
+        default_dir = ""
+        if self.project_path_var.get():
+            project_parent = os.path.dirname(self.project_path_var.get())
+            default_dir = project_parent
+
         filename = filedialog.asksaveasfilename(
             title="Save Workflow",
             defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialdir=default_dir
         )
 
         if filename:
@@ -514,6 +708,7 @@ Features:
 - Test management
 - Development planning
 - Workflow state persistence
+- Project summary generation
 
 Version: 1.0.0"""
 

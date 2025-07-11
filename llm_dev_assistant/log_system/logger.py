@@ -16,17 +16,26 @@ class Logger:
         self.debug_log_path = None
         self.info_log_path = None
 
-    def setup(self, app_name: str = "llm_dev_assistant", log_dir: str = "logs") -> Dict[str, str]:
+    def setup(self, app_name: str = "llm_dev_assistant", log_dir: Optional[str] = None) -> Dict[str, str]:
         """
         Set up the log_system system with date-based directories and timestamped log files.
 
         Args:
             app_name: Name of the application for logger naming
-            log_dir: Directory to store log files
+            log_dir: Directory to store log files (if None, uses ../logs relative to llm_dev_assistant)
 
         Returns:
             Dictionary with paths to created log files
         """
+        # Determine log directory
+        if log_dir is None:
+            # Get the path to llm_dev_assistant directory
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # Go up one level to Miaugent directory
+            parent_dir = os.path.dirname(current_dir)
+            # Create logs directory at Miaugent/logs
+            log_dir = os.path.join(parent_dir, "logs")
+
         # Create logs directory if it doesn't exist
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
