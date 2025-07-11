@@ -1,4 +1,0 @@
-2025-07-11 10:46:46,410 - llm_dev_assistant - INFO - logger.py:87 - Logging system initialized
-2025-07-11 10:46:46,410 - llm_dev_assistant - DEBUG - logger.py:88 - Debug log: logs\2025-07-11\20250711_104646_debug.log
-2025-07-11 10:46:46,410 - llm_dev_assistant - DEBUG - logger.py:89 - Info log: logs\2025-07-11\20250711_104646_info.log
-2025-07-11 10:46:46,410 - GUI - INFO - main_window.py:215 - LLM Development Assistant GUI started
