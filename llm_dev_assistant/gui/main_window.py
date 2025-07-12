@@ -18,6 +18,10 @@ from ..code_manager.test_manager import TestManager
 from ..log_system.logger import logger
 from .log_handler import setup_gui_logging, remove_gui_logging
 
+# Constants for default values
+DEFAULT_PROJECT_PATH = "I:/Darkstar"  # Default project path
+DEFAULT_SUMMARY_FILE = "I:/Darkstar/project_summary.md"  # Default summary filename
+
 
 class LLMDevAssistantGUI:
     """Simple GUI for LLM Development Assistant."""
@@ -101,7 +105,7 @@ class LLMDevAssistantGUI:
 
         # Project initialization
         ttk.Label(control_frame, text="Project Path:").grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
-        self.project_path_var = tk.StringVar()
+        self.project_path_var = tk.StringVar(value=DEFAULT_PROJECT_PATH)  # Set default value
         project_entry = ttk.Entry(control_frame, textvariable=self.project_path_var, width=30)
         project_entry.grid(row=0, column=1, padx=(5, 0), pady=(0, 5))
         ttk.Button(control_frame, text="Browse", command=self._browse_project).grid(row=0, column=2, padx=(5, 0),
@@ -118,7 +122,7 @@ class LLMDevAssistantGUI:
         # Project Summary section
         ttk.Label(control_frame, text="Project Summary:").grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
         ttk.Label(control_frame, text="Summary File:").grid(row=4, column=0, sticky=tk.W, pady=(0, 5))
-        self.summary_path_var = tk.StringVar()
+        self.summary_path_var = tk.StringVar(value=DEFAULT_SUMMARY_FILE)  # Set default value
         summary_entry = ttk.Entry(control_frame, textvariable=self.summary_path_var, width=30)
         summary_entry.grid(row=4, column=1, padx=(5, 0), pady=(0, 5))
         ttk.Button(control_frame, text="Browse", command=self._browse_summary_file).grid(row=4, column=2, padx=(5, 0),
@@ -298,7 +302,7 @@ class LLMDevAssistantGUI:
             defaultextension=".md",
             filetypes=[("Markdown files", "*.md"), ("Text files", "*.txt"), ("All files", "*.*")],
             initialdir=default_dir,
-            initialfile="project_summary.md"
+            initialfile=DEFAULT_SUMMARY_FILE
         )
         if filename:
             self.summary_path_var.set(filename)
@@ -418,7 +422,7 @@ class LLMDevAssistantGUI:
         self.current_project_path = project_path
 
     def _generate_summary(self):
-        """Generate and save project summary."""
+        """Generate and save project summary with enhanced 3-part structure."""
         if not self._ensure_workflow_engine():
             return
 
@@ -431,7 +435,13 @@ class LLMDevAssistantGUI:
         if not summary_path:
             # Set default path if not specified
             project_parent = os.path.dirname(project_path)
-            summary_path = os.path.join(project_parent, "project_summary.md")
+            summary_path = os.path.join(project_parent, DEFAULT_SUMMARY_FILE)
+            self.summary_path_var.set(summary_path)
+
+        # If summary_path is just a filename, make it relative to project parent
+        if not os.path.dirname(summary_path):
+            project_parent = os.path.dirname(project_path)
+            summary_path = os.path.join(project_parent, summary_path)
             self.summary_path_var.set(summary_path)
 
         self._update_status("Generating project summary...")
@@ -443,97 +453,108 @@ class LLMDevAssistantGUI:
                     self._update_status(f"Initializing project: {project_path}")
                     self.workflow_engine.initialize_project(project_path)
 
-                # Parse the project
+                # Parse the project with enhanced GMS2 parser
                 parsed_data = self.workflow_engine.parser.parse_directory(project_path)
 
-                # Analyze code structure
-                code_structure = self.workflow_engine.code_analyzer.analyze_project(project_path)
-
-                # Generate context/summary
-                context = self.workflow_engine.parser.generate_context(parsed_data)
-
-                # Create comprehensive summary
+                # Create comprehensive summary with 3 parts
                 summary_lines = []
                 summary_lines.append(f"# Project Summary\n")
                 summary_lines.append(f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 summary_lines.append(f"**Project Path:** {project_path}\n")
                 summary_lines.append("\n---\n")
 
-                # Add context from parser
-                summary_lines.append(context)
+                # PART A: List of all files (including path) in the project
+                summary_lines.append("## Part A: All Files in Project\n")
+                all_files = parsed_data.get('all_files', [])
+                summary_lines.append(f"**Total Files:** {len(all_files)}\n\n")
+
+                if all_files:
+                    # Group files by extension for better organization
+                    files_by_ext = {}
+                    for file_info in all_files:
+                        ext = file_info['extension'] or 'no_extension'
+                        if ext not in files_by_ext:
+                            files_by_ext[ext] = []
+                        files_by_ext[ext].append(file_info)
+
+                    for ext, files in sorted(files_by_ext.items()):
+                        summary_lines.append(f"### {ext.upper()} Files ({len(files)} files)\n")
+                        for file_info in sorted(files, key=lambda x: x['relative_path']):
+                            file_size = file_info['size']
+                            size_str = f"({file_size} bytes)" if file_size > 0 else "(empty)"
+                            summary_lines.append(f"- `{file_info['relative_path']}` {size_str}\n")
+                        summary_lines.append("\n")
+                else:
+                    summary_lines.append("No files found.\n")
+
                 summary_lines.append("\n---\n")
 
-                # Add code structure analysis
-                summary_lines.append("## Code Structure Analysis\n")
-                summary_lines.append(f"- **Total Files:** {len(code_structure.get('files', []))}\n")
-                summary_lines.append(f"- **Total Modules:** {len(code_structure.get('modules', {}))}\n")
-                summary_lines.append(f"- **Total Classes:** {len(code_structure.get('classes', {}))}\n")
-                summary_lines.append(f"- **Total Functions:** {len(code_structure.get('functions', {}))}\n")
-                summary_lines.append("\n")
+                # PART B: List each object (in GML) with all events associated with it
+                summary_lines.append("## Part B: GameMaker Objects and Events\n")
+                objects = parsed_data.get('objects', [])
+                summary_lines.append(f"**Total Objects:** {len(objects)}\n\n")
 
-                # List all functions
-                summary_lines.append("### Functions\n")
-                functions = code_structure.get('functions', {})
-                if functions:
-                    for func_name, func_info in sorted(functions.items()):
-                        file_path = func_info.get('file', 'Unknown')
-                        args = ', '.join(func_info.get('args', []))
-                        summary_lines.append(
-                            f"- **{func_name}({args})** in `{os.path.relpath(file_path, project_path)}`\n")
-                        if func_info.get('docstring'):
-                            summary_lines.append(f"  - {func_info['docstring'].strip()}\n")
-                else:
-                    summary_lines.append("No functions found.\n")
-                summary_lines.append("\n")
+                if objects:
+                    for obj in sorted(objects, key=lambda x: x['name']):
+                        summary_lines.append(f"### Object: {obj['name']}\n")
+                        summary_lines.append(f"**Description:** {obj['description']}\n")
+                        summary_lines.append(f"**Path:** `{os.path.relpath(obj['path'], project_path)}`\n")
 
-                # List all classes
-                summary_lines.append("### Classes\n")
-                classes = code_structure.get('classes', {})
-                if classes:
-                    for class_name, class_info in sorted(classes.items()):
-                        file_path = class_info.get('file', 'Unknown')
-                        summary_lines.append(f"- **{class_name}** in `{os.path.relpath(file_path, project_path)}`\n")
-                        if class_info.get('docstring'):
-                            summary_lines.append(f"  - {class_info['docstring'].strip()}\n")
-                        methods = class_info.get('methods', [])
-                        if methods:
-                            summary_lines.append("  - Methods:\n")
-                            for method in methods:
-                                args = ', '.join(method.get('args', []))
-                                summary_lines.append(f"    - {method['name']}({args})\n")
-                else:
-                    summary_lines.append("No classes found.\n")
-                summary_lines.append("\n")
+                        events = obj.get('events', [])
+                        if events:
+                            summary_lines.append(f"**Events ({len(events)}):**\n")
+                            for event in sorted(events, key=lambda x: x['name']):
+                                summary_lines.append(f"- **{event['name']}** ({event['type']})\n")
+                                summary_lines.append(f"  - *Description:* {event['description']}\n")
+                                summary_lines.append(f"  - *Path:* `{os.path.relpath(event['path'], project_path)}`\n")
 
-                # List all modules
-                summary_lines.append("### Modules\n")
-                modules = code_structure.get('modules', {})
-                if modules:
-                    for module_name, module_info in sorted(modules.items()):
-                        file_path = module_info.get('file', 'Unknown')
-                        summary_lines.append(f"- **{module_name}** (`{os.path.relpath(file_path, project_path)}`)\n")
-                        imports = module_info.get('imports', [])
-                        if imports:
-                            summary_lines.append(f"  - Imports: {', '.join(imports[:5])}")
-                            if len(imports) > 5:
-                                summary_lines.append(f" and {len(imports) - 5} more")
-                            summary_lines.append("\n")
+                                # List functions within this event
+                                event_functions = event.get('functions', [])
+                                if event_functions:
+                                    summary_lines.append(f"  - *Functions:*\n")
+                                    for func in event_functions:
+                                        args_str = ', '.join(func['arguments']) if func['arguments'] else ''
+                                        return_str = f" -> {func['return_type']}" if func['return_type'] else ''
+                                        summary_lines.append(
+                                            f"    - `{func['name']}({args_str}){return_str}`: {func['description']}\n")
+                                summary_lines.append("\n")
+                        else:
+                            summary_lines.append("**Events:** No events found\n")
+                        summary_lines.append("\n")
                 else:
-                    summary_lines.append("No modules found.\n")
-                summary_lines.append("\n")
+                    summary_lines.append("No GameMaker objects found.\n")
 
-                # List dependencies
-                summary_lines.append("### Dependencies\n")
-                dependencies = code_structure.get('dependencies', {})
-                if dependencies:
-                    for dep, users in sorted(dependencies.items()):
-                        if users:
-                            summary_lines.append(f"- **{dep}** used by: {', '.join(users[:3])}")
-                            if len(users) > 3:
-                                summary_lines.append(f" and {len(users) - 3} more")
-                            summary_lines.append("\n")
+                summary_lines.append("\n---\n")
+
+                # PART C: List each script file with all functions
+                summary_lines.append("## Part C: Script Files and Functions\n")
+                scripts = parsed_data.get('scripts', [])
+                summary_lines.append(f"**Total Scripts:** {len(scripts)}\n\n")
+
+                if scripts:
+                    for script in sorted(scripts, key=lambda x: x['name']):
+                        summary_lines.append(f"### Script: {script['name']}\n")
+                        summary_lines.append(f"**Description:** {script['description']}\n")
+                        summary_lines.append(f"**Path:** `{os.path.relpath(script['path'], project_path)}`\n")
+
+                        functions = script.get('functions', [])
+                        if functions:
+                            summary_lines.append(f"**Functions ({len(functions)}):**\n")
+                            for func in sorted(functions, key=lambda x: x['name']):
+                                args_str = ', '.join(func['arguments']) if func['arguments'] else ''
+                                return_str = f" -> {func['return_type']}" if func['return_type'] else ''
+                                summary_lines.append(f"- **`{func['name']}({args_str}){return_str}`**\n")
+                                summary_lines.append(f"  - *Description:* {func['description']}\n")
+                                if func['arguments']:
+                                    summary_lines.append(f"  - *Arguments:* {', '.join(func['arguments'])}\n")
+                                if func['return_type']:
+                                    summary_lines.append(f"  - *Returns:* {func['return_type']}\n")
+                                summary_lines.append("\n")
+                        else:
+                            summary_lines.append("**Functions:** No functions found\n")
+                        summary_lines.append("\n")
                 else:
-                    summary_lines.append("No dependencies found.\n")
+                    summary_lines.append("No script files found.\n")
 
                 # Join all lines
                 summary_content = ''.join(summary_lines)
@@ -543,7 +564,7 @@ class LLMDevAssistantGUI:
                 if summary_dir and not os.path.exists(summary_dir):
                     os.makedirs(summary_dir)
 
-                # Save summary to file
+                # Save summary to file (this will overwrite if file exists)
                 with open(summary_path, 'w', encoding='utf-8') as f:
                     f.write(summary_content)
 
@@ -552,10 +573,13 @@ class LLMDevAssistantGUI:
                     "message": f"Project summary saved to: {summary_path}",
                     "summary_path": summary_path,
                     "stats": {
-                        "files": len(code_structure.get('files', [])),
-                        "modules": len(code_structure.get('modules', {})),
-                        "classes": len(code_structure.get('classes', {})),
-                        "functions": len(code_structure.get('functions', {}))
+                        "total_files": len(all_files),
+                        "objects": len(objects),
+                        "scripts": len(scripts),
+                        "total_events": sum(len(obj.get('events', [])) for obj in objects),
+                        "total_functions": sum(len(script.get('functions', [])) for script in scripts) +
+                                           sum(len(event.get('functions', [])) for obj in objects for event in
+                                               obj.get('events', []))
                     }
                 }
 
