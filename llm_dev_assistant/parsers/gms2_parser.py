@@ -135,6 +135,8 @@ class GMS2Parser(ParserInterface):
             'description': description,
             'events': events
         }
+
+    def _parse_script(self, script_path: str) -> Optional[Dict[str, Any]]:
         """Parse a GMS2 script file (.gml)."""
         script_name = os.path.splitext(os.path.basename(script_path))[0]
         description = self._get_asset_description(script_path)
@@ -156,6 +158,27 @@ class GMS2Parser(ParserInterface):
             'content': content,
             'functions': functions
         }
+
+    def _get_asset_description(self, asset_path: str) -> str:
+        """Get description for an asset from comments or description files."""
+        # First try to get description from the code itself
+        if asset_path.endswith('.gml'):
+            content = self.get_file_content(asset_path)
+            description = self._extract_description_from_gml(content)
+            if description != "No description available":
+                return description
+
+        # Try to find a description file
+        base_path = os.path.splitext(asset_path)[0]
+        desc_file = base_path + '.txt'
+        if os.path.exists(desc_file):
+            try:
+                with open(desc_file, 'r', encoding='utf-8') as f:
+                    return f.read().strip()
+            except (IOError, UnicodeDecodeError):
+                pass
+
+        return "No description available"
 
     def _parse_object(self, metadata_path: str, asset_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse a GMS2 object and its events."""
