@@ -21,6 +21,7 @@ from .log_handler import setup_gui_logging, remove_gui_logging
 # Constants for default values
 DEFAULT_PROJECT_PATH = "I:/Darkstar"  # Default project path
 DEFAULT_SUMMARY_FILE = "I:/Darkstar/project_summary.md"  # Default summary filename
+DEFAULT_FULL_REPORT_FILE = "I:/Darkstar/project_full_report.md"  # Default full report filename
 
 
 class LLMDevAssistantGUI:
@@ -62,6 +63,7 @@ class LLMDevAssistantGUI:
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Initialize Project", command=self._init_project)
         file_menu.add_command(label="Generate Project Summary", command=self._generate_summary)
+        file_menu.add_command(label="Create Full Project Report", command=self._generate_full_report)
         file_menu.add_separator()
         file_menu.add_command(label="Save Workflow", command=self._save_workflow)
         file_menu.add_command(label="Load Workflow", command=self._load_workflow)
@@ -120,37 +122,53 @@ class LLMDevAssistantGUI:
                                                                pady=10)
 
         # Project Summary section
-        ttk.Label(control_frame, text="Project Summary:").grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
+        ttk.Label(control_frame, text="Project Reports:").grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
+
+        # Summary file path
         ttk.Label(control_frame, text="Summary File:").grid(row=4, column=0, sticky=tk.W, pady=(0, 5))
         self.summary_path_var = tk.StringVar(value=DEFAULT_SUMMARY_FILE)  # Set default value
         summary_entry = ttk.Entry(control_frame, textvariable=self.summary_path_var, width=30)
         summary_entry.grid(row=4, column=1, padx=(5, 0), pady=(0, 5))
         ttk.Button(control_frame, text="Browse", command=self._browse_summary_file).grid(row=4, column=2, padx=(5, 0),
                                                                                          pady=(0, 5))
-        ttk.Button(control_frame, text="Generate Project Summary", command=self._generate_summary).grid(row=5, column=0,
-                                                                                                        columnspan=3,
-                                                                                                        pady=(0, 10),
-                                                                                                        sticky=tk.W + tk.E)
+
+        # Full report file path
+        ttk.Label(control_frame, text="Full Report File:").grid(row=5, column=0, sticky=tk.W, pady=(0, 5))
+        self.full_report_path_var = tk.StringVar(value=DEFAULT_FULL_REPORT_FILE)  # Set default value
+        full_report_entry = ttk.Entry(control_frame, textvariable=self.full_report_path_var, width=30)
+        full_report_entry.grid(row=5, column=1, padx=(5, 0), pady=(0, 5))
+        ttk.Button(control_frame, text="Browse", command=self._browse_full_report_file).grid(row=5, column=2,
+                                                                                             padx=(5, 0),
+                                                                                             pady=(0, 5))
+
+        # Report generation buttons
+        report_button_frame = ttk.Frame(control_frame)
+        report_button_frame.grid(row=6, column=0, columnspan=3, pady=(5, 10))
+
+        ttk.Button(report_button_frame, text="Generate Project Summary", command=self._generate_summary).pack(
+            side=tk.LEFT, padx=2)
+        ttk.Button(report_button_frame, text="Create Full Project Report", command=self._generate_full_report).pack(
+            side=tk.LEFT, padx=2)
 
         # Separator
-        ttk.Separator(control_frame, orient='horizontal').grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E),
+        ttk.Separator(control_frame, orient='horizontal').grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E),
                                                                pady=10)
 
         # Task operations
-        ttk.Label(control_frame, text="Task Description:").grid(row=7, column=0, sticky=tk.W, pady=(0, 5))
+        ttk.Label(control_frame, text="Task Description:").grid(row=8, column=0, sticky=tk.W, pady=(0, 5))
         self.task_text = tk.Text(control_frame, height=5, width=40, wrap=tk.WORD)
-        self.task_text.grid(row=8, column=0, columnspan=3, pady=(0, 5), sticky=(tk.W, tk.E))
+        self.task_text.grid(row=9, column=0, columnspan=3, pady=(0, 5), sticky=(tk.W, tk.E))
 
-        ttk.Label(control_frame, text="File Path (optional):").grid(row=9, column=0, sticky=tk.W, pady=(0, 5))
+        ttk.Label(control_frame, text="File Path (optional):").grid(row=10, column=0, sticky=tk.W, pady=(0, 5))
         self.file_path_var = tk.StringVar()
         file_entry = ttk.Entry(control_frame, textvariable=self.file_path_var, width=30)
-        file_entry.grid(row=9, column=1, padx=(5, 0), pady=(0, 5))
-        ttk.Button(control_frame, text="Browse", command=self._browse_file).grid(row=9, column=2, padx=(5, 0),
+        file_entry.grid(row=10, column=1, padx=(5, 0), pady=(0, 5))
+        ttk.Button(control_frame, text="Browse", command=self._browse_file).grid(row=10, column=2, padx=(5, 0),
                                                                                  pady=(0, 5))
 
         # Task buttons
         button_frame = ttk.Frame(control_frame)
-        button_frame.grid(row=10, column=0, columnspan=3, pady=10)
+        button_frame.grid(row=11, column=0, columnspan=3, pady=10)
 
         ttk.Button(button_frame, text="Request Code", command=self._request_code).grid(row=0, column=0, padx=2, pady=2)
         ttk.Button(button_frame, text="Verify Implementation", command=self._verify_implementation).grid(row=0,
@@ -164,14 +182,14 @@ class LLMDevAssistantGUI:
                                                                                              pady=2)
 
         # Separator
-        ttk.Separator(control_frame, orient='horizontal').grid(row=11, column=0, columnspan=3, sticky=(tk.W, tk.E),
+        ttk.Separator(control_frame, orient='horizontal').grid(row=12, column=0, columnspan=3, sticky=(tk.W, tk.E),
                                                                pady=10)
 
         # Workflow management
-        ttk.Label(control_frame, text="Workflow Management:").grid(row=12, column=0, columnspan=3, sticky=tk.W,
+        ttk.Label(control_frame, text="Workflow Management:").grid(row=13, column=0, columnspan=3, sticky=tk.W,
                                                                    pady=(0, 5))
         workflow_frame = ttk.Frame(control_frame)
-        workflow_frame.grid(row=13, column=0, columnspan=3)
+        workflow_frame.grid(row=14, column=0, columnspan=3)
 
         ttk.Button(workflow_frame, text="Save Workflow", command=self._save_workflow).pack(side=tk.LEFT, padx=2)
         ttk.Button(workflow_frame, text="Load Workflow", command=self._load_workflow).pack(side=tk.LEFT, padx=2)
@@ -306,6 +324,25 @@ class LLMDevAssistantGUI:
         )
         if filename:
             self.summary_path_var.set(filename)
+
+    def _browse_full_report_file(self):
+        """Browse for full report file location."""
+        # Get default directory
+        default_dir = ""
+        if self.project_path_var.get():
+            # Use parent directory of project (Miaugent directory)
+            project_parent = os.path.dirname(self.project_path_var.get())
+            default_dir = project_parent
+
+        filename = filedialog.asksaveasfilename(
+            title="Save Full Project Report As",
+            defaultextension=".md",
+            filetypes=[("Markdown files", "*.md"), ("Text files", "*.txt"), ("All files", "*.*")],
+            initialdir=default_dir,
+            initialfile=DEFAULT_FULL_REPORT_FILE
+        )
+        if filename:
+            self.full_report_path_var.set(filename)
 
     def _update_status(self, message: str):
         """Update status bar."""
@@ -596,6 +633,209 @@ class LLMDevAssistantGUI:
 
         self._run_async(generate_and_save_summary)
 
+    def _generate_full_report(self):
+        """Generate and save full project report including complete function content."""
+        if not self._ensure_workflow_engine():
+            return
+
+        project_path = self.project_path_var.get()
+        if not project_path:
+            messagebox.showwarning("Warning", "Please select a project directory first")
+            return
+
+        full_report_path = self.full_report_path_var.get()
+        if not full_report_path:
+            # Set default path if not specified
+            project_parent = os.path.dirname(project_path)
+            full_report_path = os.path.join(project_parent, DEFAULT_FULL_REPORT_FILE)
+            self.full_report_path_var.set(full_report_path)
+
+        # If full_report_path is just a filename, make it relative to project parent
+        if not os.path.dirname(full_report_path):
+            project_parent = os.path.dirname(project_path)
+            full_report_path = os.path.join(project_parent, full_report_path)
+            self.full_report_path_var.set(full_report_path)
+
+        self._update_status("Generating full project report...")
+
+        def generate_and_save_full_report():
+            try:
+                # Initialize project if not already done
+                if self.workflow_engine.workflow_state.get("project_path") != project_path:
+                    self._update_status(f"Initializing project: {project_path}")
+                    self.workflow_engine.initialize_project(project_path)
+
+                # Parse the project with enhanced GMS2 parser
+                parsed_data = self.workflow_engine.parser.parse_directory(project_path)
+
+                # Create comprehensive full report with 3 parts (including full content)
+                report_lines = []
+                report_lines.append(f"# Full Project Report\n")
+                report_lines.append(f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                report_lines.append(f"**Project Path:** {project_path}\n")
+                report_lines.append("\n---\n")
+
+                # PART A: List of all files (including path) in the project
+                report_lines.append("## Part A: All Files in Project\n")
+                all_files = parsed_data.get('all_files', [])
+                report_lines.append(f"**Total Files:** {len(all_files)}\n\n")
+
+                if all_files:
+                    # Group files by extension for better organization
+                    files_by_ext = {}
+                    for file_info in all_files:
+                        ext = file_info['extension'] or 'no_extension'
+                        if ext not in files_by_ext:
+                            files_by_ext[ext] = []
+                        files_by_ext[ext].append(file_info)
+
+                    for ext, files in sorted(files_by_ext.items()):
+                        report_lines.append(f"### {ext.upper()} Files ({len(files)} files)\n")
+                        for file_info in sorted(files, key=lambda x: x['relative_path']):
+                            file_size = file_info['size']
+                            size_str = f"({file_size} bytes)" if file_size > 0 else "(empty)"
+                            report_lines.append(f"- `{file_info['relative_path']}` {size_str}\n")
+                        report_lines.append("\n")
+                else:
+                    report_lines.append("No files found.\n")
+
+                report_lines.append("\n---\n")
+
+                # PART B: List each object (in GML) with all events and their FULL CONTENT
+                report_lines.append("## Part B: GameMaker Objects and Events (Full Content)\n")
+                objects = parsed_data.get('objects', [])
+                report_lines.append(f"**Total Objects:** {len(objects)}\n\n")
+
+                if objects:
+                    for obj in sorted(objects, key=lambda x: x['name']):
+                        report_lines.append(f"### Object: {obj['name']}\n")
+                        report_lines.append(f"**Description:** {obj['description']}\n")
+                        report_lines.append(f"**Path:** `{os.path.relpath(obj['path'], project_path)}`\n")
+
+                        events = obj.get('events', [])
+                        if events:
+                            report_lines.append(f"**Events ({len(events)}):**\n\n")
+                            for event in sorted(events, key=lambda x: x['name']):
+                                report_lines.append(f"#### Event: {event['name']} ({event['type']})\n")
+                                if event['description'] != "No description available":
+                                    report_lines.append(f"**Description:** {event['description']}\n")
+                                report_lines.append(f"**Path:** `{os.path.relpath(event['path'], project_path)}`\n\n")
+
+                                # Include the full content of the event
+                                event_content = event.get('content', '')
+                                if event_content and event_content != "Error reading file":
+                                    report_lines.append(f"**Full Content:**\n")
+                                    report_lines.append("```gml\n")
+                                    report_lines.append(event_content)
+                                    if not event_content.endswith('\n'):
+                                        report_lines.append('\n')
+                                    report_lines.append("```\n\n")
+                                else:
+                                    report_lines.append("*No content available or error reading file.*\n\n")
+
+                                # List functions within this event with their details
+                                event_functions = event.get('functions', [])
+                                if event_functions:
+                                    report_lines.append(f"**Functions in this event ({len(event_functions)}):**\n")
+                                    for func in event_functions:
+                                        args_str = ', '.join(func['arguments']) if func['arguments'] else ''
+                                        return_str = f" -> {func['return_type']}" if func['return_type'] else ''
+                                        report_lines.append(f"- `{func['name']}({args_str}){return_str}`")
+                                        if func['description'] != "No description available":
+                                            report_lines.append(f": {func['description']}")
+                                        report_lines.append("\n")
+                                    report_lines.append("\n")
+
+                                report_lines.append("---\n\n")
+                        else:
+                            report_lines.append("**Events:** No events found\n\n")
+
+                        report_lines.append("=" * 80 + "\n\n")
+                else:
+                    report_lines.append("No GameMaker objects found.\n")
+
+                report_lines.append("\n---\n")
+
+                # PART C: List each script file with all functions and their FULL CONTENT
+                report_lines.append("## Part C: Script Files and Functions (Full Content)\n")
+                scripts = parsed_data.get('scripts', [])
+                report_lines.append(f"**Total Scripts:** {len(scripts)}\n\n")
+
+                if scripts:
+                    for script in sorted(scripts, key=lambda x: x['name']):
+                        report_lines.append(f"### Script: {script['name']}\n")
+                        if script['description'] != "No description available":
+                            report_lines.append(f"**Description:** {script['description']}\n")
+                        report_lines.append(f"**Path:** `{os.path.relpath(script['path'], project_path)}`\n\n")
+
+                        # Include the full content of the script
+                        script_content = script.get('content', '')
+                        if script_content and script_content != "Error reading file":
+                            report_lines.append(f"**Full Content:**\n")
+                            report_lines.append("```gml\n")
+                            report_lines.append(script_content)
+                            if not script_content.endswith('\n'):
+                                report_lines.append('\n')
+                            report_lines.append("```\n\n")
+                        else:
+                            report_lines.append("*No content available or error reading file.*\n\n")
+
+                        functions = script.get('functions', [])
+                        if functions:
+                            report_lines.append(f"**Functions in this script ({len(functions)}):**\n")
+                            for func in sorted(functions, key=lambda x: x['name']):
+                                args_str = ', '.join(func['arguments']) if func['arguments'] else ''
+                                return_str = f" -> {func['return_type']}" if func['return_type'] else ''
+                                report_lines.append(f"- **`{func['name']}({args_str}){return_str}`**\n")
+                                if func['description'] != "No description available":
+                                    report_lines.append(f"  - *Description:* {func['description']}\n")
+                                if func['arguments']:
+                                    report_lines.append(f"  - *Arguments:* {', '.join(func['arguments'])}\n")
+                                if func['return_type']:
+                                    report_lines.append(f"  - *Returns:* {func['return_type']}\n")
+                                report_lines.append("\n")
+                        else:
+                            report_lines.append("**Functions:** No functions found\n")
+
+                        report_lines.append("=" * 80 + "\n\n")
+                else:
+                    report_lines.append("No script files found.\n")
+
+                # Join all lines
+                report_content = ''.join(report_lines)
+
+                # Create directory if it doesn't exist
+                report_dir = os.path.dirname(full_report_path)
+                if report_dir and not os.path.exists(report_dir):
+                    os.makedirs(report_dir)
+
+                # Save full report to file (this will overwrite if file exists)
+                with open(full_report_path, 'w', encoding='utf-8') as f:
+                    f.write(report_content)
+
+                return {
+                    "status": "success",
+                    "message": f"Full project report saved to: {full_report_path}",
+                    "report_path": full_report_path,
+                    "stats": {
+                        "total_files": len(all_files),
+                        "objects": len(objects),
+                        "scripts": len(scripts),
+                        "total_events": sum(len(obj.get('events', [])) for obj in objects),
+                        "total_functions": sum(len(script.get('functions', [])) for script in scripts) +
+                                           sum(len(event.get('functions', [])) for obj in objects for event in
+                                               obj.get('events', []))
+                    }
+                }
+
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": f"Failed to generate full report: {str(e)}"
+                }
+
+        self._run_async(generate_and_save_full_report)
+
     def _request_code(self):
         """Request code implementation."""
         if not self._ensure_workflow_engine():
@@ -738,6 +978,7 @@ Features:
 - Development planning
 - Workflow state persistence
 - Project summary generation
+- Full project report generation
 
 Version: 1.0.0"""
 
@@ -1034,4 +1275,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
