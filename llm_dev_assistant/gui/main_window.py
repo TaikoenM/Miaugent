@@ -505,7 +505,8 @@ class LLMDevAssistantGUI:
                             summary_lines.append(f"**Events ({len(events)}):**\n")
                             for event in sorted(events, key=lambda x: x['name']):
                                 summary_lines.append(f"- **{event['name']}** ({event['type']})\n")
-                                summary_lines.append(f"  - *Description:* {event['description']}\n")
+                                if event['description'] != "No description available":
+                                    summary_lines.append(f"  - *Description:* {event['description']}\n")
                                 summary_lines.append(f"  - *Path:* `{os.path.relpath(event['path'], project_path)}`\n")
 
                                 # List functions within this event
@@ -515,8 +516,10 @@ class LLMDevAssistantGUI:
                                     for func in event_functions:
                                         args_str = ', '.join(func['arguments']) if func['arguments'] else ''
                                         return_str = f" -> {func['return_type']}" if func['return_type'] else ''
-                                        summary_lines.append(
-                                            f"    - `{func['name']}({args_str}){return_str}`: {func['description']}\n")
+                                        summary_lines.append(f"    - `{func['name']}({args_str}){return_str}`")
+                                        if func['description'] != "No description available":
+                                            summary_lines.append(f": {func['description']}")
+                                        summary_lines.append("\n")
                                 summary_lines.append("\n")
                         else:
                             summary_lines.append("**Events:** No events found\n")
@@ -534,7 +537,8 @@ class LLMDevAssistantGUI:
                 if scripts:
                     for script in sorted(scripts, key=lambda x: x['name']):
                         summary_lines.append(f"### Script: {script['name']}\n")
-                        summary_lines.append(f"**Description:** {script['description']}\n")
+                        if script['description'] != "No description available":
+                            summary_lines.append(f"**Description:** {script['description']}\n")
                         summary_lines.append(f"**Path:** `{os.path.relpath(script['path'], project_path)}`\n")
 
                         functions = script.get('functions', [])
@@ -544,7 +548,8 @@ class LLMDevAssistantGUI:
                                 args_str = ', '.join(func['arguments']) if func['arguments'] else ''
                                 return_str = f" -> {func['return_type']}" if func['return_type'] else ''
                                 summary_lines.append(f"- **`{func['name']}({args_str}){return_str}`**\n")
-                                summary_lines.append(f"  - *Description:* {func['description']}\n")
+                                if func['description'] != "No description available":
+                                    summary_lines.append(f"  - *Description:* {func['description']}\n")
                                 if func['arguments']:
                                     summary_lines.append(f"  - *Arguments:* {', '.join(func['arguments'])}\n")
                                 if func['return_type']:
@@ -1029,3 +1034,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

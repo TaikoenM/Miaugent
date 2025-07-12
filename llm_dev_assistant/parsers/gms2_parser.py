@@ -34,7 +34,15 @@ class GMS2Parser(ParserInterface):
         }
 
         for root, dirs, files in os.walk(directory_path):
+            # Skip .git directories and files
+            if '.git' in root:
+                continue
+
             for file in files:
+                # Skip .git files
+                if '.git' in file:
+                    continue
+
                 file_path = os.path.join(root, file)
                 file_ext = os.path.splitext(file)[1].lower()
                 relative_path = os.path.relpath(file_path, directory_path)
@@ -48,29 +56,85 @@ class GMS2Parser(ParserInterface):
                     'size': os.path.getsize(file_path) if os.path.exists(file_path) else 0
                 })
 
-                # Handle script files (.gml)
-                if file_ext in self.supported_extensions['code']:
+        # Parse objects by scanning the objects directory
+        objects_dir = os.path.join(directory_path, 'objects')
+        if os.path.exists(objects_dir):
+            result['objects'] = self._parse_objects_directory(objects_dir)
+
+        # Parse scripts by scanning the scripts directory
+        scripts_dir = os.path.join(directory_path, 'scripts')
+        if os.path.exists(scripts_dir):
+            result['scripts'].extend(self._parse_scripts_directory(scripts_dir))
+
+        # Also check for individual .gml files that might be scripts
+        for file_info in result['all_files']:
+            if file_info['extension'] == '.gml':
+                file_path = file_info['path']
+                # Only process if it's not already handled by objects or scripts directories
+                if not (file_path.startswith(objects_dir) or file_path.startswith(scripts_dir)):
                     script_data = self._parse_script(file_path)
                     if script_data:
                         result['scripts'].append(script_data)
 
-                # Handle object metadata files (.yy) - specifically for objects
-                elif file_ext in self.supported_extensions['metadata']:
-                    asset_data = self._parse_asset_metadata(file_path)
-                    if asset_data:
-                        if asset_data.get('type') == 'GMObject':
-                            # This is an object, parse its events
-                            object_data = self._parse_object(file_path, asset_data)
-                            if object_data:
-                                result['objects'].append(object_data)
-                        else:
-                            # Other asset
-                            if asset_data not in result['scripts']:
-                                result['other_assets'].append(asset_data)
-
         return result
 
-    def _parse_script(self, script_path: str) -> Dict[str, Any]:
+    def _parse_objects_directory(self, objects_dir: str) -> List[Dict[str, Any]]:
+        """Parse all objects from the objects directory."""
+        objects = []
+
+        for obj_name in os.listdir(objects_dir):
+            obj_path = os.path.join(objects_dir, obj_name)
+            if os.path.isdir(obj_path):
+                object_data = self._parse_object_from_directory(obj_path, obj_name)
+                if object_data:
+                    objects.append(object_data)
+
+        return objects
+
+    def _parse_scripts_directory(self, scripts_dir: str) -> List[Dict[str, Any]]:
+        """Parse all scripts from the scripts directory."""
+        scripts = []
+
+        for script_name in os.listdir(scripts_dir):
+            script_path = os.path.join(scripts_dir, script_name)
+            if os.path.isdir(script_path):
+                # Look for .gml file in the script directory
+                gml_file = os.path.join(script_path, script_name + '.gml')
+                if os.path.exists(gml_file):
+                    script_data = self._parse_script(gml_file)
+                    if script_data:
+                        scripts.append(script_data)
+
+        return scripts
+
+    def _parse_object_from_directory(self, obj_path: str, obj_name: str) -> Optional[Dict[str, Any]]:
+        """Parse a GMS2 object from its directory structure."""
+        events = []
+
+        # Look for all .gml files in the object directory
+        for file in os.listdir(obj_path):
+            if file.endswith('.gml'):
+                event_path = os.path.join(obj_path, file)
+                event_data = self._parse_event(event_path)
+                if event_data:
+                    events.append(event_data)
+
+        # Get description from the first event file or use default
+        description = "No description available"
+        if events:
+            # Look for description in any of the events
+            for event in events:
+                if event.get('description') and event['description'] != "No description available":
+                    description = event['description']
+                    break
+
+        return {
+            'name': obj_name,
+            'type': 'object',
+            'path': obj_path,
+            'description': description,
+            'events': events
+        }
         """Parse a GMS2 script file (.gml)."""
         script_name = os.path.splitext(os.path.basename(script_path))[0]
         description = self._get_asset_description(script_path)
@@ -134,31 +198,40 @@ class GMS2Parser(ParserInterface):
             'path': event_path,
             'content': content,
             'functions': functions,
-            'description': self._extract_description_from_code(content)
+            'description': self._extract_description_from_gml(content)
         }
 
     def _determine_event_type(self, event_name: str) -> str:
         """Determine the type of event from its filename."""
-        event_name_lower = event_name.lower()
+        # GameMaker Studio 2 uses specific naming conventions for events
+        # Examples: Create_0, Destroy_0, Step_0, Draw_0, Draw_64, etc.
 
-        # Common GMS2 event mappings
-        event_mappings = {
-            'create': 'Create Event',
-            'destroy': 'Destroy Event',
-            'step': 'Step Event',
-            'draw': 'Draw Event',
-            'collision': 'Collision Event',
-            'alarm': 'Alarm Event',
-            'keyboard': 'Keyboard Event',
-            'mouse': 'Mouse Event',
-            'other': 'Other Event'
-        }
-
-        for key, value in event_mappings.items():
-            if key in event_name_lower:
-                return value
-
-        return 'Unknown Event'
+        if event_name.startswith('Create'):
+            return 'Create Event'
+        elif event_name.startswith('Destroy'):
+            return 'Destroy Event'
+        elif event_name.startswith('Step'):
+            return 'Step Event'
+        elif event_name.startswith('Draw_64'):
+            return 'Draw GUI Event'
+        elif event_name.startswith('Draw'):
+            return 'Draw Event'
+        elif event_name.startswith('Collision'):
+            return 'Collision Event'
+        elif event_name.startswith('Alarm'):
+            return 'Alarm Event'
+        elif event_name.startswith('Keyboard'):
+            return 'Keyboard Event'
+        elif event_name.startswith('Mouse'):
+            return 'Mouse Event'
+        elif event_name.startswith('Other'):
+            return 'Other Event'
+        elif event_name.startswith('CleanUp'):
+            return 'Clean Up Event'
+        elif event_name.startswith('User'):
+            return 'User Event'
+        else:
+            return f'Unknown Event ({event_name})'
 
     def _parse_functions_from_gml(self, content: str) -> List[Dict[str, Any]]:
         """Parse function definitions from GML content."""
@@ -202,32 +275,48 @@ class GMS2Parser(ParserInterface):
 
         for line in lines:
             line = line.strip()
-            # Look for comments at the beginning of the function
-            if line.startswith('//') or line.startswith('/*') or line.startswith('*'):
-                # Clean up comment markers
-                clean_line = re.sub(r'^[/\*\s]*', '', line)
-                clean_line = re.sub(r'\*/$', '', clean_line)
-                if clean_line:
-                    description_lines.append(clean_line)
+            # Look for /// @description comments or regular /// comments
+            if line.startswith('/// @description'):
+                desc_text = line.replace('/// @description', '').strip()
+                if desc_text:
+                    description_lines.append(desc_text)
+            elif line.startswith('///'):
+                # Regular /// comment
+                desc_text = line.replace('///', '').strip()
+                if desc_text and not desc_text.startswith('@'):
+                    description_lines.append(desc_text)
+            elif line.startswith('//'):
+                # Regular // comment
+                desc_text = line.replace('//', '').strip()
+                if desc_text:
+                    description_lines.append(desc_text)
             elif line and not line.startswith('function'):
-                # Stop looking for comments once we hit actual code
+                # Stop looking for comments once we hit actual code (unless it's the function declaration)
                 break
 
         return ' '.join(description_lines) if description_lines else "No description available"
 
-    def _extract_description_from_code(self, content: str) -> str:
-        """Extract description from code comments."""
+    def _extract_description_from_gml(self, content: str) -> str:
+        """Extract description from /// @description comments in GML code."""
         lines = content.split('\n')
         description_lines = []
 
-        for line in lines[:10]:  # Only check first 10 lines
+        for line in lines:
             line = line.strip()
-            if line.startswith('//') or line.startswith('/*') or line.startswith('*'):
-                # Clean up comment markers
-                clean_line = re.sub(r'^[/\*\s]*', '', line)
-                clean_line = re.sub(r'\*/$', '', clean_line)
-                if clean_line:
-                    description_lines.append(clean_line)
+            # Look for /// @description comments
+            if line.startswith('/// @description'):
+                # Extract the description text after the @description tag
+                desc_text = line.replace('/// @description', '').strip()
+                if desc_text:
+                    description_lines.append(desc_text)
+            elif line.startswith('///') and description_lines:
+                # Continue multi-line description
+                desc_text = line.replace('///', '').strip()
+                if desc_text:
+                    description_lines.append(desc_text)
+            elif line and not line.startswith('///') and not line.startswith('//'):
+                # Stop looking for descriptions once we hit actual code
+                break
 
         return ' '.join(description_lines) if description_lines else "No description available"
 
@@ -247,7 +336,7 @@ class GMS2Parser(ParserInterface):
                 'name': asset_name,
                 'type': asset_type,
                 'path': metadata_path,
-                'description': self._get_asset_description(metadata_path),
+                'description': "Metadata file (description in code)",
                 'metadata': metadata
             }
         except (json.JSONDecodeError, UnicodeDecodeError, IOError):
@@ -258,19 +347,6 @@ class GMS2Parser(ParserInterface):
                 'description': 'Error parsing metadata file',
                 'metadata': {}
             }
-
-    def _get_asset_description(self, asset_path: str) -> str:
-        """Get description from an accompanying .txt file."""
-        description_path = os.path.splitext(asset_path)[0] + '.txt'
-
-        if os.path.exists(description_path):
-            try:
-                with open(description_path, 'r', encoding='utf-8') as f:
-                    return f.read().strip()
-            except (IOError, UnicodeDecodeError):
-                return "Error reading description file"
-
-        return "Missing description"
 
     def get_file_content(self, file_path: str) -> str:
         """Get the content of a file."""
@@ -292,11 +368,29 @@ class GMS2Parser(ParserInterface):
         """
         context = ["# Game Maker Studio 2 Project Context\n"]
 
+        # Add objects section
+        context.append("## Available Objects\n")
+        for obj in parsed_data.get('objects', []):
+            context.append(f"### {obj['name']}\n")
+            if obj['description'] != "No description available":
+                context.append(f"**Description**: {obj['description']}\n")
+            context.append(f"**Path**: {obj['path']}\n")
+
+            if obj.get('events'):
+                context.append("**Events**:\n")
+                for event in obj['events']:
+                    context.append(f"- {event['name']} ({event['type']})")
+                    if event['description'] != "No description available":
+                        context.append(f": {event['description']}")
+                    context.append("\n")
+            context.append("\n")
+
         # Add scripts section
         context.append("## Available Scripts\n")
-        for script in parsed_data['scripts']:
+        for script in parsed_data.get('scripts', []):
             context.append(f"### {script['name']}\n")
-            context.append(f"**Description**: {script['description']}\n")
+            if script['description'] != "No description available":
+                context.append(f"**Description**: {script['description']}\n")
             context.append(f"**Path**: {script['path']}\n")
 
             # Include first few lines of code as a preview
@@ -305,23 +399,5 @@ class GMS2Parser(ParserInterface):
                 code_preview += "\n// ... (more code continues)"
 
             context.append("```gml\n" + code_preview + "\n```\n")
-
-        # Add objects section
-        context.append("## Available Objects\n")
-        for obj in parsed_data.get('objects', []):
-            context.append(f"### {obj['name']}\n")
-            context.append(f"**Description**: {obj['description']}\n")
-            context.append(f"**Path**: {obj['path']}\n")
-
-            if obj.get('events'):
-                context.append("**Events**:\n")
-                for event in obj['events']:
-                    context.append(f"- {event['name']} ({event['type']}): {event['description']}\n")
-            context.append("\n")
-
-        # Add other assets section
-        context.append("## Other Assets\n")
-        for asset in parsed_data.get('other_assets', []):
-            context.append(f"- **{asset['name']}** ({asset['type']}): {asset['description']}\n")
 
         return "\n".join(context)
